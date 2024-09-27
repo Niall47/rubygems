@@ -2,21 +2,19 @@
 
 module Bundler
   class CLI::Outdated
-    attr_reader :options, :gems, :options_include_groups, :filter_options_patch, :sources, :strict
+    attr_reader :options, :gems, :filter_options_patch, :sources, :strict
     attr_accessor :outdated_gems
 
     def initialize(options, gems)
       @options = options
       @gems = gems
       @sources = Array(options[:source])
-
       @filter_options_patch = options.keys & %w[filter-major filter-minor filter-patch]
+      @without_group = options["without-group"].map(&:to_sym)
+      @only_group = (Array(options["only-group"]) + Array(options["group"])).compact.map(&:to_sym).uniq
 
+      # @only_group = (options["only-group"] + options["group"]).compact.map(&:to_sym).uniq
       @outdated_gems = []
-
-      @options_include_groups = [:group, :groups].any? do |v|
-        options.keys.include?(v.to_s)
-      end
 
       # the patch level options imply strict is also true. It wouldn't make
       # sense otherwise.
@@ -24,6 +22,8 @@ module Bundler
     end
 
     def run
+      raise InvalidOption, "The `--only-group` and `--without-group` options cannot be used together" if @only_group.any? && @without_group.any?
+
       check_for_deployment_mode!
 
       gems.each do |gem_name|
@@ -96,16 +96,16 @@ module Bundler
           groups: groups,
         }
       end
+      relevant_outdated_gems = outdated_gems.select do |gem|
+        groups = gem[:dependency]&.groups || []
 
-      relevant_outdated_gems = if options_include_groups
-        outdated_gems.group_by {|g| g[:groups] }.sort.flat_map do |groups, gems|
-          contains_group = groups.split(", ").include?(options[:group])
-          next unless options[:groups] || contains_group
-
-          gems
-        end.compact
-      else
-        outdated_gems
+        if @without_group.any?
+          !(@without_group & groups).any?
+        elsif @only_group.any?
+          (@only_group & groups).any?
+        else
+          true
+        end
       end
 
       if relevant_outdated_gems.empty?

@@ -371,8 +371,8 @@ module Bundler
       For more information on patch level options (--major, --minor, --patch,
       --strict) see documentation on the same options on the update command.
     D
-    method_option "group", type: :string, banner: "List gems from a specific group"
-    method_option "groups", type: :boolean, banner: "List gems organized by groups"
+    method_option "only-group", type: :array, default: [], aliases: "--group", banner: "List gems from a specific group or set of groups"
+    method_option "without-group", type: :array, default: [], banner: "List gems excluding gems from a specific group or set of groups"
     method_option "local", type: :boolean, banner: "Do not attempt to fetch gems remotely and use the gem cache instead"
     method_option "pre", type: :boolean, banner: "Check for newer pre-release gems"
     method_option "source", type: :array, banner: "Check against a specific source"
